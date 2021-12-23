@@ -28,7 +28,7 @@ contract SimpleDefiToken is ERC20, ERC20Snapshot, AccessControl, Pausable, ERC20
         address mintTo;
     }
 
-    mapping (string=>dist) distribution;
+    mapping (string=>dist) public distribution;
 
     event MintRelease(string _type, address indexed to, uint256 value);
 
@@ -151,7 +151,7 @@ contract SimpleDefiToken is ERC20, ERC20Snapshot, AccessControl, Pausable, ERC20
         (, uint month, uint day) = BokkyPooBahsDateTimeLibrary.timestampToDate(_blocktime);
         for (uint i = 0;i<6;i++) {
             if (distribution[dists[i]].cycles > 0 && distribution[dists[i]].current_supply < distribution[dists[i]].max_supply) {
-                if ((distribution[dists[i]].lastCycle != month && distribution[dists[i]].cycleDay >= day)||distribution[dists[i]].multiplier == 0) {
+                if ((distribution[dists[i]].lastCycle != month && day >= distribution[dists[i]].cycleDay)||distribution[dists[i]].multiplier == 0) {
                     if (distribution[dists[i]].multiplier == 0) {
                         mintAmount = distribution[dists[i]].max_supply;
                     }
@@ -173,7 +173,7 @@ contract SimpleDefiToken is ERC20, ERC20Snapshot, AccessControl, Pausable, ERC20
                     }
 
                 }
-                distribution[dists[i]].cycles--;
+                if (mintAmount>0) distribution[dists[i]].cycles--;
             }
         }
 
