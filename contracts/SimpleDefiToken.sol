@@ -41,12 +41,6 @@ contract EasyToken is ERC20, ERC20Burnable, ERC20Snapshot, Pausable, AccessContr
         _grantRole(PAUSER_ROLE, msg.sender);
         _grantRole(MINTER_ROLE, msg.sender);
 
-        reset_token();
-    }
-
-    function reset_token() private {
-        require(tokenLive == false, "Token is already live");
-
         distribution["PRIVATE_PLACEMENT"] = dist({
             max_supply: 40000000,
             current_supply: 0,
@@ -137,20 +131,6 @@ contract EasyToken is ERC20, ERC20Burnable, ERC20Snapshot, Pausable, AccessContr
         override(ERC20, ERC20Snapshot)
     {
         super._beforeTokenTransfer(from, to, amount);
-    }
-    //remove for production
-    function setBlocktime(uint newBlocktime) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(tokenLive == false, "Token is already live");
-        blocktime = newBlocktime;
-    }
-
-    function setLive() public onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(tokenLive == false, "Token is already live");
-
-        reset_token();
-        
-        tokenLive = true;
-        blocktime = 0;
     }
 
     function cycleRelease() public onlyRole(MINTER_ROLE) {
