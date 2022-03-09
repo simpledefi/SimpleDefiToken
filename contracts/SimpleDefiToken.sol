@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./lib/BokkyPooBahsDateTimeLibrary.sol";
 
 /// @custom:security-contact dev@simpledefi.io
-contract SimpleDEFI is ERC20, ERC20Burnable, ERC20Snapshot, Pausable, AccessControl {
+contract EasyToken is ERC20, ERC20Burnable, ERC20Snapshot, Pausable, AccessControl {
     bytes32 public constant SNAPSHOT_ROLE = keccak256("SNAPSHOT_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
@@ -35,11 +35,17 @@ contract SimpleDEFI is ERC20, ERC20Burnable, ERC20Snapshot, Pausable, AccessCont
 
     event MintRelease(string _type, address indexed to, uint256 value);
 
-    constructor()   ERC20("SimpleDEFI", "EASY"){
+    constructor()   ERC20("EasyToken", "EASY"){
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(SNAPSHOT_ROLE, msg.sender);
         _grantRole(PAUSER_ROLE, msg.sender);
         _grantRole(MINTER_ROLE, msg.sender);
+
+        reset_token();
+    }
+
+    function reset_token() private {
+        require(tokenLive == false, "Token is already live");
 
         distribution["PRIVATE_PLACEMENT"] = dist({
             max_supply: 40000000,
@@ -112,9 +118,8 @@ contract SimpleDEFI is ERC20, ERC20Burnable, ERC20Snapshot, Pausable, AccessCont
             nextCycle: 0,
             mintTo: msg.sender
         });
-
-
     }
+
     function snapshot() public onlyRole(SNAPSHOT_ROLE) {
         _snapshot();
     }
@@ -141,6 +146,9 @@ contract SimpleDEFI is ERC20, ERC20Burnable, ERC20Snapshot, Pausable, AccessCont
 
     function setLive() public onlyRole(DEFAULT_ADMIN_ROLE) {
         require(tokenLive == false, "Token is already live");
+
+        reset_token();
+        
         tokenLive = true;
         blocktime = 0;
     }
@@ -177,12 +185,8 @@ contract SimpleDEFI is ERC20, ERC20Burnable, ERC20Snapshot, Pausable, AccessCont
                         _mint(distribution[dists[i]].mintTo, mintAmount);                    
                         emit MintRelease(dists[i],distribution[dists[i]].mintTo, mintAmount);
                     }
-
                 }
             }
         }
-
     }
-
-
 }
