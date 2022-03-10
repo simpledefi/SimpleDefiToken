@@ -17,7 +17,7 @@ contract("EasyToken", function (accounts) {
   });
 
   it("Should have non 0 balance", async () => {
-    await sd.cycleRelease();
+    console.log(await sd.cycleRelease());
     let bal = await sd.balanceOf(accounts[0]);
     console.log("Balance of accounts[0] is: " + bal);
   });
@@ -37,21 +37,26 @@ contract("EasyToken", function (accounts) {
     let bal = await sd.balanceOf(accounts[0]);
     console.log("Balance of accounts[0] is: " + bal);
     await sd.setBlocktime(start_time+month);
-    await sd.cycleRelease();
+    console.log(await sd.cycleRelease());
     bal = await sd.balanceOf(accounts[0]);
     console.log("Balance of accounts[0] is: " + bal);
     let dist = await sd.distribution("PRIVATE_PLACEMENT");
     console.log(JSON.stringify(dist));
   });
 
-  it("Can transfer to a second account", async () => {
-    let bal1 = await sd.balanceOf(accounts[0]);
-    await sd.transfer(accounts[1], 100);
-    let bal2 = await sd.balanceOf(accounts[0]);
-    let bal = await sd.balanceOf(accounts[1]);
-    console.log("Balance of accounts[1] is: " + bal);
-    console.log(`transferred accounts[0] is: ${bal2.toNumber()-bal1.toNumber()}`);
-    assert(bal == 100,"Tokens not transferred");
-    assert(bal2.toNumber()-bal1.toNumber() == -100,"Tokens not transferred");
-  });
+  // it("Can transfer to a second account", async () => {
+  //   let bal1 = await sd.balanceOf(accounts[0]);
+  //   await sd.transfer(accounts[1], 100);
+  //   let bal2 = await sd.balanceOf(accounts[0]);
+  //   let bal = await sd.balanceOf(accounts[1]);
+  //   console.log("Balance of accounts[1] is: " + bal);
+  //   console.log(`transferred accounts[0] is: ${bal2.toNumber()-bal1.toNumber()}`);
+  //   assert(bal == 100,"Tokens not transferred");
+  //   assert(bal2.toNumber()-bal1.toNumber() == -100,"Tokens not transferred");
+  // });
+
+  // it("Shoudn't allow cycleRelease in same month", async () => {
+  //   let result = await sd.cycleRelease();
+  //   console.log(result);
+  // });
 });
