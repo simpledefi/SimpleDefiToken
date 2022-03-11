@@ -48,4 +48,13 @@ contract("EasyToken", function (accounts) {
     let snap = await sd.snapshot();
     console.log("Snapshot: " + JSON.stringify(snap));
   });
+
+  it("Should allow transfer to different account", async function () {
+    await sd.transfer(accounts[1], 100);
+    let bal = await sd.balanceOf(accounts[0]);
+    console.log("Balance of accounts[0] is: " + bal);
+    bal = await sd.balanceOf(accounts[1]);
+    console.log("Balance of accounts[1] is: " + bal);
+    assert(bal == 40000000000000000000000100, "Balance of accounts[1] should increase by 100");
+  });
 });
