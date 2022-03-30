@@ -11,6 +11,7 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
     }
 
     event MintRelease(address indexed to, uint256 value);
+    event SnapshotMade(uint id);
     constructor() ERC20("SimpleDEFI", "$EASY") ERC20Capped(400000000*1e18) {}
 
     function mint(mintTo[] calldata _mintTo) external onlyOwner{
@@ -22,10 +23,13 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
         for (uint i = 0; i < _mintTo.length; i++) {
             _mint(_mintTo[i].to, _mintTo[i].amount);
         }
+        emit MintRelease(address(this),subtotal);
     }
 
     function snapshot() public onlyOwner returns (uint){
-        return _snapshot();
+        uint _id = _snapshot();
+        emit SnapshotMade(_id);
+        return _id;
     }
 
     function _beforeTokenTransfer(address _from, address _to, uint256 _amount) internal override(ERC20, ERC20Snapshot)
