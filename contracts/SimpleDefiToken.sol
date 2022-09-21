@@ -12,7 +12,7 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
 
     event MintRelease(address indexed to, uint256 value);
     event SnapshotMade(uint id);
-    constructor() ERC20("SimpleDEFI", "$EASY") ERC20Capped(400 * 1e24) {}
+    constructor() ERC20("SimpleDEFI", "$EASY") ERC20Capped(400 * 10e24) {}
 
     function mint(mintTo[] calldata _mintTo) external onlyOwner{
         uint subtotal;
