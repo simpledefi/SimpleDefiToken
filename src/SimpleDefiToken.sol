@@ -21,11 +21,24 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
 
     error functionLocked();
     error invalidBlockNumber();
+
+    /// @title EASY Token Contract
+    /// @author Derrick Brabury
+
+    /// @notice Contract Constructor
+    /// @param _releaseBlock - Block Number that all the tokens are relased, only set during constructor call
     constructor(uint _releaseBlock) ERC20("SimpleDEFI", "EASY") ERC20Capped(400 * 1e24) {
         releaseBlock = _releaseBlock;
         locked = true;
     }
 
+
+    /// @notice Adds a user to release transfers at a specified block
+    /// @dev Not allowed to increase the release date, just decrease it.
+    /// @dev Only allowed to be called by contract owner.
+    /// @dev emits address, and block number
+    /// @param _addr         - Address of user to allow transfers
+    /// @param _blockNumber - block to allow transfers
     function addRelease(address _addr, uint _blockNumber) external onlyOwner {
         uint _rd = releaseAddresses[_addr];
         if (_rd > 0 && _blockNumber > _rd) revert invalidBlockNumber();
@@ -33,11 +46,20 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
         emit releaseAddressAdd(_addr, _blockNumber);
     }
 
+    /// @notice Allows unrestricted transfers
+    /// @dev Only can set locked to false, no abilitiy to re-lock the contract
+    /// @dev Only allowed to be called by contract owner.
+    /// @dev emits TokenReleased
     function releaseToken() external onlyOwner {
         locked = false;
         emit TokenReleased();
     }
 
+
+    /// @notice Mints tokens to an array of users and amounts
+    /// @param _mintTo - structure array of users and amounts    
+    /// @dev Only allowed to be called by contract owner.
+    /// @dev emits address, and amount minted
     function mint(mintTo[] calldata _mintTo) external onlyOwner{
         uint subtotal;
         for (uint i = 0; i < _mintTo.length; i++) {
@@ -50,11 +72,20 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
         emit MintRelease(address(this),subtotal);
     }
 
+
+    /// @notice Part of OpenZeppelin contract to take snapshot of token holders
+    /// @return - returns snapshot id
     function snapshot() public onlyOwner returns (uint){
         uint _id = _snapshot();
         emit SnapshotMade(_id);
         return _id;
     }
+
+    /// @notice Part of OpenZeppelin contract to execute before a transfer. 
+    /// @dev Checks if transfer functionality is locked
+    /// @param _from   - address transferring tokens from
+    /// @param _to     - address transferring tokens to
+    /// @param _amount - number of tokens being transferred
 
     function _beforeTokenTransfer(address _from, address _to, uint256 _amount) internal override(ERC20, ERC20Snapshot)
     {
@@ -62,6 +93,10 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
         super._beforeTokenTransfer(_from, _to, _amount);
     }
 
+    /// @notice Internal function that actually mints the tokens
+    /// @param to    - address to mint tokens to
+    /// @param value - number of tokens to mint
+    /// @dev emits address and amount of tokens minted
     function _mint(address to, uint256 value) internal override (ERC20Capped,ERC20) {
         ERC20Capped._mint(to, value);
         emit MintRelease( to, value);
