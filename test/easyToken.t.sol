@@ -126,4 +126,15 @@ contract EasyTokenTest is Test {
         console.log("rBalance 1:", ERC20(address(token)).balanceOf(vm.addr(2)));
 
     }
+
+    function test012_LotsaTransfers() public {
+        test010_MultipleMints();
+        vm.roll(block.number+600);
+        for (uint i=2; i < 10; i++) {
+            vm.prank(vm.addr(i));
+            ERC20(address(token)).transfer(vm.addr(i+10),1 ether);
+            console.log("Balance :", ERC20(address(token)).balanceOf(vm.addr(i)));
+            console.log("Balance :", ERC20(address(token)).balanceOf(vm.addr(i+10)));
+        }
+    }
 }

@@ -86,7 +86,6 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
     /// @param _from   - address transferring tokens from
     /// @param _to     - address transferring tokens to
     /// @param _amount - number of tokens being transferred
-
     function _beforeTokenTransfer(address _from, address _to, uint256 _amount) internal override(ERC20, ERC20Snapshot)
     {
         if (locked == true && block.number <= releaseBlock && (releaseAddresses[msg.sender] == 0 || block.number <= releaseAddresses[msg.sender]) && msg.sender != owner()) revert functionLocked();        
