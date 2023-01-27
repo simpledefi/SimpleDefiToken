@@ -154,4 +154,15 @@ contract EasyTokenTest is Test {
         vm.expectRevert("ERC20: mint to the zero address");
         mint(address(0),1 ether, false);
     }
+
+    function test016_testSnapshot() public {
+        vm.expectRevert("Ownable: caller is not the owner");
+        vm.prank(vm.addr(2));        
+        uint id = token.snapshot();
+        console.log("snapshot:", id);
+
+        id = token.snapshot();
+        console.log("snapshot:", id);
+
+    }
 }
