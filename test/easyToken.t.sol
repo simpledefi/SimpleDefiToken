@@ -137,4 +137,21 @@ contract EasyTokenTest is Test {
             console.log("Balance :", ERC20(address(token)).balanceOf(vm.addr(i+10)));
         }
     }
+
+    function test013_invalidRelease() public {
+        vm.expectRevert("Ownable: caller is not the owner");
+        vm.prank(vm.addr(2));
+        token.releaseToken();
+    }
+
+    function test014_invalidAdd() public {
+        vm.expectRevert("Ownable: caller is not the owner");
+        vm.prank(vm.addr(2));
+        token.addRelease(vm.addr(3),block.number + 20);
+    }
+
+    function test015_invalidMintTo() public {
+        vm.expectRevert("ERC20: mint to the zero address");
+        mint(address(0),1 ether, false);
+    }
 }
