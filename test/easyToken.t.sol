@@ -21,7 +21,7 @@ contract EasyTokenTest is Test {
         delete(tokens);
         if (_revert) vm.expectRevert();
 
-        tokens.push(EasyToken.mintTo(_addr,_amount));
+        tokens.push(EasyToken.mintTo(_addr,_amount,0));
         token.mint(tokens);
         console.log("Balance:", _addr, ERC20(address(token)).balanceOf(_addr));
     }
@@ -100,7 +100,7 @@ contract EasyTokenTest is Test {
     }
 
     function test009_DisallowOverMinting() public {
-        tokens.push(EasyToken.mintTo(token.owner(),500000000 ether));
+        tokens.push(EasyToken.mintTo(token.owner(),500000000 ether,0));
         vm.expectRevert("Total amount exceeds cap");
         token.mint(tokens);
     }
@@ -165,4 +165,9 @@ contract EasyTokenTest is Test {
         console.log("snapshot:", id);
 
     }
+
+    //ADD TESTS: Transfer to unlocked, and then a locked address
+    //Mint, transfer, and then a locked address
+    
+
 }

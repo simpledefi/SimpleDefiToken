@@ -8,6 +8,7 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
     struct mintTo {
         address to;
         uint256 amount;
+        uint256 blocknumber;
     }
 
     mapping(address=>uint) public releaseAddresses;
@@ -39,7 +40,7 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
     /// @dev emits address, and block number
     /// @param _addr         - Address of user to allow transfers
     /// @param _blockNumber - block to allow transfers
-    function addRelease(address _addr, uint _blockNumber) external onlyOwner {
+    function addRelease(address _addr, uint _blockNumber) public onlyOwner {
         uint _rd = releaseAddresses[_addr];
         if (_rd > 0 && _blockNumber > _rd) revert invalidBlockNumber();
         releaseAddresses[_addr] = _blockNumber;
@@ -68,10 +69,22 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
         require(subtotal + totalSupply() <= cap(), "Total amount exceeds cap");
         for (uint i = 0; i < _mintTo.length; i++) {
             _mint(_mintTo[i].to, _mintTo[i].amount);
+            if (_mintTo[i].blocknumber > 0) {
+                addRelease(_mintTo[i].to,_mintTo[i].blocknumber);
+            }
         }
         emit MintRelease(address(this),subtotal);
     }
 
+
+    /// @notice Transfers tokens from one address to anothera, but locks until specified block number
+    /// @param _to - address to transfer tokens to 
+    /// @param _amount - amount of tokens to transfer
+    /// @param _blocknumber - block number until lock is released
+    function transfer(address _to, uint _amount, uint _blocknumber) public onlyOwner {
+        if (_blocknumber>0) addRelease(_to, _blocknumber);
+        super.transfer(_to, _amount);
+    }
 
     /// @notice Part of OpenZeppelin contract to take snapshot of token holders
     /// @return - returns snapshot id
