@@ -163,11 +163,85 @@ contract EasyTokenTest is Test {
 
         id = token.snapshot();
         console.log("snapshot:", id);
+    }
+
+    function test020_airdrop() public {
+        uint release_block = block.number + 10000;
+        console.log("RELEASE AT:", release_block);
+        for (uint i = 2; i < 12; i++) {
+                tokens.push(EasyToken.mintTo(vm.addr(i),960 ether,release_block));
+        }
+        console.log(token.totalSupply(), token.cap());
+        token.airdrop(tokens);
 
     }
 
-    //ADD TESTS: Transfer to unlocked, and then a locked address
-    //Mint, transfer, and then a locked address
-    
+    function test021_airdrop_transfer() public {
+        test020_airdrop();
+        token.releaseToken();
+        vm.roll(block.number + 50);
+        vm.expectRevert();
+        vm.prank(vm.addr(2));
+        token.transfer(0x42a515c1EDB651F4c69c56E05578D2805D6451eB,960 ether);
 
+        vm.roll(block.number + 10050);
+        vm.prank(vm.addr(2));
+        token.transfer(0x42a515c1EDB651F4c69c56E05578D2805D6451eB,960 ether);
+    }
+
+    function test022_airdrop_buy_transfer() public {
+        test020_airdrop();
+        token.releaseToken();
+        mint(vm.addr(2),100 ether, false);
+
+        vm.expectRevert();
+        vm.prank(vm.addr(2));
+        token.transfer(0x42a515c1EDB651F4c69c56E05578D2805D6451eB,101 ether);
+
+        vm.prank(vm.addr(2));
+        token.transfer(0x42a515c1EDB651F4c69c56E05578D2805D6451eB,100 ether);
+
+        vm.expectRevert();
+        vm.prank(vm.addr(2));
+        token.transfer(0x42a515c1EDB651F4c69c56E05578D2805D6451eB,1 ether);
+        
+        vm.roll(block.number + 10050);
+        vm.prank(vm.addr(2));
+        token.transfer(0x42a515c1EDB651F4c69c56E05578D2805D6451eB,960 ether);
+    }
+
+    function test023_multiple_airdrop() public {
+        test020_airdrop();
+        delete tokens;
+        uint release_block = block.number + 15000;
+        tokens.push(EasyToken.mintTo(vm.addr(2),100 ether,release_block));
+        token.airdrop(tokens);
+
+        vm.roll(block.number + 10050);
+        vm.expectRevert();
+        vm.prank(vm.addr(2));
+        token.transfer(0x42a515c1EDB651F4c69c56E05578D2805D6451eB,100 ether);
+
+        vm.roll(block.number + 15050);
+        vm.prank(vm.addr(2));
+        token.transfer(0x42a515c1EDB651F4c69c56E05578D2805D6451eB,100 ether);
+    }    
+
+
+    function test024_update_airdrop() public {
+        test020_airdrop();
+        token.releaseToken();
+        vm.expectRevert();
+        vm.prank(vm.addr(2));
+        token.transfer(0x42a515c1EDB651F4c69c56E05578D2805D6451eB,100 ether);
+
+        token.updateAirdrop(vm.addr(2), 100 ether, 0);
+        vm.prank(vm.addr(2));
+        token.transfer(0x42a515c1EDB651F4c69c56E05578D2805D6451eB,100 ether);
+
+        vm.expectRevert();
+        vm.prank(vm.addr(2));
+        token.transfer(0x42a515c1EDB651F4c69c56E05578D2805D6451eB,1 ether);
+
+    }
 }

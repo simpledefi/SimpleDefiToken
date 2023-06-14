@@ -4,6 +4,7 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Snapshot.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+
 contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
     struct mintTo {
         address to;
@@ -12,16 +13,22 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
     }
 
     mapping(address=>uint) public releaseAddresses;
+    mapping(address=>uint256) public airdropAddresses;
+    mapping(address=>uint256) public airdropLocked;
+
     bool public locked;
     uint public releaseBlock;
 
     event MintRelease(address indexed to, uint256 value);
-    event releaseAddressAdd(address _addr, uint _blockNumber);
+    event ReleaseAddressAdd(address _addr, uint _blockNumber);
+    event AirdropAddressAdd(address _addr, uint _blockNumber);
+    event AirdropUpdate(address _user, uint256 _reduceAmount, uint256 _block);
     event SnapshotMade(uint id);
     event TokenReleased();
 
     error functionLocked();
     error invalidBlockNumber();
+    error invalidAmount();
 
     /// @title EASY Token Contract
     /// @author Derrick Brabury
@@ -44,7 +51,7 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
         uint _rd = releaseAddresses[_addr];
         if (_rd > 0 && _blockNumber > _rd) revert invalidBlockNumber();
         releaseAddresses[_addr] = _blockNumber;
-        emit releaseAddressAdd(_addr, _blockNumber);
+        emit ReleaseAddressAdd(_addr, _blockNumber);
     }
 
     /// @notice Allows unrestricted transfers
@@ -55,8 +62,6 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
         locked = false;
         emit TokenReleased();
     }
-
-
     /// @notice Mints tokens to an array of users and amounts
     /// @param _mintTo - structure array of users and amounts    
     /// @dev Only allowed to be called by contract owner.
@@ -76,6 +81,46 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
         emit MintRelease(address(this),subtotal);
     }
 
+    /// @notice airdops tokens to an array of users and amounts and locks the tokens to a specific block 
+    /// @param _mintTo - structure array of users and amounts    
+    /// @dev Only allowed to be called by contract owner.
+    /// @dev emits address, and amount minted
+    function airdrop(mintTo[] calldata _mintTo) external onlyOwner{
+        uint subtotal;
+        for (uint i = 0; i < _mintTo.length; i++) {
+            subtotal += _mintTo[i].amount;         
+        }
+        require(subtotal + totalSupply() <= cap(), "Total amount exceeds cap");
+        for (uint i = 0; i < _mintTo.length; i++) {
+            _mint(_mintTo[i].to, _mintTo[i].amount);
+
+            if (airdropAddresses[_mintTo[i].to] < block.number) //clears out any old airdrops if they are expired
+                airdropLocked[_mintTo[i].to] = _mintTo[i].amount;
+            else
+                airdropLocked[_mintTo[i].to] += _mintTo[i].amount;
+                
+            airdropAddresses[_mintTo[i].to] = _mintTo[i].blocknumber;
+            emit AirdropAddressAdd(_mintTo[i].to, _mintTo[i].blocknumber);
+        }
+        emit MintRelease(address(this),subtotal);
+    }
+
+    /// @notice Allow admin to decrease release time of airdropped user
+    /// @param _user - the address of the user to release tokens
+    /// @param _block - the block to release the token
+    /// @dev emits user and block to be released
+    function updateAirdrop(address _user, uint _reduceAmount, uint _block) public onlyOwner {
+        if (_block > 0) {
+            if (airdropAddresses[_user] > 0 && airdropAddresses[_user] > _block) revert invalidBlockNumber();
+            airdropAddresses[_user] = _block;        
+        }
+
+        if (_reduceAmount > 0) {
+            if (_reduceAmount > airdropLocked[_user]) revert invalidAmount();
+            airdropLocked[_user] -= _reduceAmount;
+        }
+        emit AirdropUpdate(_user, _reduceAmount, _block);
+    }
 
     /// @notice Transfers tokens from one address to anothera, but locks until specified block number
     /// @param _to - address to transfer tokens to 
@@ -101,7 +146,10 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
     /// @param _amount - number of tokens being transferred
     function _beforeTokenTransfer(address _from, address _to, uint256 _amount) internal override(ERC20, ERC20Snapshot)
     {
-        if (locked == true && block.number <= releaseBlock && (releaseAddresses[msg.sender] == 0 || block.number <= releaseAddresses[msg.sender]) && msg.sender != owner()) revert functionLocked();        
+        if (locked == true && block.number <= releaseBlock && (releaseAddresses[_from] == 0 || block.number <= releaseAddresses[_from]) && msg.sender != owner()) revert functionLocked();      
+        if (airdropAddresses[_from] > 0 && block.number < airdropAddresses[_from]) {
+            if (_amount > balanceOf(_from) - airdropLocked[_from]) revert invalidAmount();
+        }
         super._beforeTokenTransfer(_from, _to, _amount);
     }
 
