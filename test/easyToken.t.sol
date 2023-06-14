@@ -165,19 +165,23 @@ contract EasyTokenTest is Test {
         console.log("snapshot:", id);
     }
 
-    function test020_airdrop() public {
+    function airdrop(uint cliff) private {
+        uint cliff_block = block.number + (10000-cliff);
         uint release_block = block.number + 10000;
-        console.log("RELEASE AT:", release_block);
+        console.log("RELEASE AT:", cliff_block, release_block);
         for (uint i = 2; i < 12; i++) {
                 tokens.push(EasyToken.mintTo(vm.addr(i),960 ether,release_block));
         }
         console.log(token.totalSupply(), token.cap());
-        token.airdrop(tokens);
+        token.airdrop(tokens,0,cliff_block);
+    }
 
+    function test020_airdrop() public {
+        airdrop(0);
     }
 
     function test021_airdrop_transfer() public {
-        test020_airdrop();
+        airdrop(0);
         token.releaseToken();
         vm.roll(block.number + 50);
         vm.expectRevert();
@@ -190,7 +194,7 @@ contract EasyTokenTest is Test {
     }
 
     function test022_airdrop_buy_transfer() public {
-        test020_airdrop();
+        airdrop(0);
         token.releaseToken();
         mint(vm.addr(2),100 ether, false);
 
@@ -211,11 +215,11 @@ contract EasyTokenTest is Test {
     }
 
     function test023_multiple_airdrop() public {
-        test020_airdrop();
+        airdrop(0);
         delete tokens;
         uint release_block = block.number + 15000;
         tokens.push(EasyToken.mintTo(vm.addr(2),100 ether,release_block));
-        token.airdrop(tokens);
+        token.airdrop(tokens,0,0);
 
         vm.roll(block.number + 10050);
         vm.expectRevert();
@@ -229,7 +233,7 @@ contract EasyTokenTest is Test {
 
 
     function test024_update_airdrop() public {
-        test020_airdrop();
+        airdrop(0);
         token.releaseToken();
         vm.expectRevert();
         vm.prank(vm.addr(2));
@@ -244,4 +248,17 @@ contract EasyTokenTest is Test {
         token.transfer(0x42a515c1EDB651F4c69c56E05578D2805D6451eB,1 ether);
 
     }
+
+    function test025_check_drip() public {
+        airdrop(0);
+        uint _block = block.number + 500;
+        uint _last = block.number + 11000;
+
+        while(_block <= _last) {
+            // console.log("Block:",_block);
+            vm.roll(_block);
+            console.log("Calc:", _block, token.airdropLocked(vm.addr(2)));
+            _block += 500;
+        }
+    }    
 }

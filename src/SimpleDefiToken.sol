@@ -9,12 +9,17 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
     struct mintTo {
         address to;
         uint256 amount;
-        uint256 blocknumber;
+        uint256 blocknumber;        
+    }
+
+    struct sAirdrop {
+        uint256 amount;
+        uint256 cliff;
+        uint256 release;
     }
 
     mapping(address=>uint) public releaseAddresses;
-    mapping(address=>uint256) public airdropAddresses;
-    mapping(address=>uint256) public airdropLocked;
+    mapping(address=>sAirdrop) _airdrop;
 
     bool public locked;
     uint public releaseBlock;
@@ -83,23 +88,31 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
 
     /// @notice airdops tokens to an array of users and amounts and locks the tokens to a specific block 
     /// @param _mintTo - structure array of users and amounts    
+    /// @param _cliff  - The date that the rewards are starting to drop to the user
     /// @dev Only allowed to be called by contract owner.
     /// @dev emits address, and amount minted
-    function airdrop(mintTo[] calldata _mintTo) external onlyOwner{
+    function airdrop(mintTo[] calldata _mintTo,uint256 _releasePct, uint256 _cliff) external onlyOwner{
         uint subtotal;
         for (uint i = 0; i < _mintTo.length; i++) {
             subtotal += _mintTo[i].amount;         
         }
         require(subtotal + totalSupply() <= cap(), "Total amount exceeds cap");
+        
+        _releasePct = 0;
+
         for (uint i = 0; i < _mintTo.length; i++) {
             _mint(_mintTo[i].to, _mintTo[i].amount);
 
-            if (airdropAddresses[_mintTo[i].to] < block.number) //clears out any old airdrops if they are expired
-                airdropLocked[_mintTo[i].to] = _mintTo[i].amount;
+            if (_airdrop[_mintTo[i].to].release < block.number) //clears out any old airdrops if they are expired
+                _airdrop[_mintTo[i].to].amount = _mintTo[i].amount;
             else
-                airdropLocked[_mintTo[i].to] += _mintTo[i].amount;
+                _airdrop[_mintTo[i].to].amount += _mintTo[i].amount;
                 
-            airdropAddresses[_mintTo[i].to] = _mintTo[i].blocknumber;
+            if (_mintTo[i].blocknumber < _cliff) revert invalidAmount();
+
+            _airdrop[_mintTo[i].to].release = _mintTo[i].blocknumber;
+            _airdrop[_mintTo[i].to].cliff = _cliff>0?_cliff:_mintTo[i].blocknumber;
+
             emit AirdropAddressAdd(_mintTo[i].to, _mintTo[i].blocknumber);
         }
         emit MintRelease(address(this),subtotal);
@@ -111,13 +124,13 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
     /// @dev emits user and block to be released
     function updateAirdrop(address _user, uint _reduceAmount, uint _block) public onlyOwner {
         if (_block > 0) {
-            if (airdropAddresses[_user] > 0 && airdropAddresses[_user] > _block) revert invalidBlockNumber();
-            airdropAddresses[_user] = _block;        
+            if (_airdrop[_user].release > 0 && _airdrop[_user].release > _block) revert invalidBlockNumber();
+            _airdrop[_user].release = _block;        
         }
 
         if (_reduceAmount > 0) {
-            if (_reduceAmount > airdropLocked[_user]) revert invalidAmount();
-            airdropLocked[_user] -= _reduceAmount;
+            if (_reduceAmount > _airdrop[_user].amount) revert invalidAmount();
+            _airdrop[_user].amount -= _reduceAmount;
         }
         emit AirdropUpdate(_user, _reduceAmount, _block);
     }
@@ -147,10 +160,26 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
     function _beforeTokenTransfer(address _from, address _to, uint256 _amount) internal override(ERC20, ERC20Snapshot)
     {
         if (locked == true && block.number <= releaseBlock && (releaseAddresses[_from] == 0 || block.number <= releaseAddresses[_from]) && msg.sender != owner()) revert functionLocked();      
-        if (airdropAddresses[_from] > 0 && block.number < airdropAddresses[_from]) {
-            if (_amount > balanceOf(_from) - airdropLocked[_from]) revert invalidAmount();
+        if (_airdrop[_from].release > 0 && block.number < _airdrop[_from].release) {            
+            if (_amount > balanceOf(_from) - airdropLocked(_from)) revert invalidAmount();
         }
         super._beforeTokenTransfer(_from, _to, _amount);
+    }
+
+    function airdropLocked(address _from) public view returns (uint256 _locked) {
+        if (block.number > _airdrop[_from].release) return 0;
+
+        uint _tmpAmount;
+        if (block.number > _airdrop[_from].cliff) {
+            uint _a = (block.number > _airdrop[_from].release)?1 ether:(block.number - _airdrop[_from].cliff)*1e18;            
+            uint _b = (_airdrop[_from].release - _airdrop[_from].cliff);
+            uint _pct = (_a/_b);
+            _tmpAmount = (_airdrop[_from].amount * _pct)/1e18;
+        }
+        else {
+            _tmpAmount = 0;
+        }
+        _locked = _airdrop[_from].amount - _tmpAmount;
     }
 
     /// @notice Internal function that actually mints the tokens
