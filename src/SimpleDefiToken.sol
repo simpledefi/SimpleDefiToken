@@ -87,8 +87,9 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
     }
 
     /// @notice airdops tokens to an array of users and amounts and locks the tokens to a specific block 
-    /// @param _mintTo - structure array of users and amounts    
-    /// @param _cliff  - The date that the rewards are starting to drop to the user
+    /// @param _mintTo     - structure array of users and amounts    
+    /// @param _releasePct - Percentage of the airdropped tokens to remain unlocked
+    /// @param _cliff      - The date that the rewards are starting to drop to the user
     /// @dev Only allowed to be called by contract owner.
     /// @dev emits address, and amount minted
     function airdrop(mintTo[] calldata _mintTo,uint256 _releasePct, uint256 _cliff) external onlyOwner{
