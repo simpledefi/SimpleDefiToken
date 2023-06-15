@@ -67,6 +67,7 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
         locked = false;
         emit TokenReleased();
     }
+
     /// @notice Mints tokens to an array of users and amounts
     /// @param _mintTo - structure array of users and amounts    
     /// @dev Only allowed to be called by contract owner.
@@ -167,6 +168,11 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
         super._beforeTokenTransfer(_from, _to, _amount);
     }
 
+
+    /// @notice This function looks at the airdrop table and determines number of tokens that are locked under specific terms
+    /// @dev cliff is the block number where the drip function starts, and release is the block number where all tokens are released
+    /// @param _from - address of user to determine locked amount of tokens
+    /// @return _locked - number of locked tokens for user that cannot be transferred
     function airdropLocked(address _from) public view returns (uint256 _locked) {
         if (block.number > _airdrop[_from].release) return 0;
 
