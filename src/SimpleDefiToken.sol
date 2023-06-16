@@ -12,6 +12,10 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
         uint256 blocknumber;        
     }
 
+    struct airdropTo{
+        address to;
+        uint256 amount;
+    }
     struct sAirdrop {
         uint256 amount;
         uint256 cliff;
@@ -40,7 +44,7 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
 
     /// @notice Contract Constructor
     /// @param _releaseBlock - Block Number that all the tokens are relased, only set during constructor call
-    constructor(uint _releaseBlock) ERC20("SimpleDEFI", "EASY") ERC20Capped(400 * 1e24) {
+    constructor(uint _releaseBlock) ERC20("SimpleDEFI v2", "EASY") ERC20Capped(400 * 1e24) {
         releaseBlock = _releaseBlock;
         locked = true;
     }
@@ -93,29 +97,29 @@ contract EasyToken is ERC20Capped, ERC20Burnable, ERC20Snapshot, Ownable {
     /// @param _cliff      - The date that the rewards are starting to drop to the user
     /// @dev Only allowed to be called by contract owner.
     /// @dev emits address, and amount minted
-    function airdrop(mintTo[] calldata _mintTo,uint256 _releasePct, uint256 _cliff) external onlyOwner{
+    function airdrop(airdropTo[] calldata _mintTo, uint256 _releasePct, uint256 _cliff, uint256 _release) external onlyOwner{
+        if (_release < _cliff) revert invalidBlockNumber();
         uint subtotal;
         for (uint i = 0; i < _mintTo.length; i++) {
             subtotal += _mintTo[i].amount;         
         }
         require(subtotal + totalSupply() <= cap(), "Total amount exceeds cap");
         
-        _releasePct = 0;
 
         for (uint i = 0; i < _mintTo.length; i++) {
             _mint(_mintTo[i].to, _mintTo[i].amount);
+            uint _locked = _mintTo[i].amount - (_mintTo[i].amount * (_releasePct/100))/1e18;
 
             if (_airdrop[_mintTo[i].to].release < block.number) //clears out any old airdrops if they are expired
-                _airdrop[_mintTo[i].to].amount = _mintTo[i].amount;
+                _airdrop[_mintTo[i].to].amount = _locked;
             else
-                _airdrop[_mintTo[i].to].amount += _mintTo[i].amount;
+                _airdrop[_mintTo[i].to].amount += _locked;
                 
-            if (_mintTo[i].blocknumber < _cliff) revert invalidAmount();
 
-            _airdrop[_mintTo[i].to].release = _mintTo[i].blocknumber;
-            _airdrop[_mintTo[i].to].cliff = _cliff>0?_cliff:_mintTo[i].blocknumber;
+            _airdrop[_mintTo[i].to].release = _release;
+            _airdrop[_mintTo[i].to].cliff = _cliff>0?_cliff:_release;
 
-            emit AirdropAddressAdd(_mintTo[i].to, _mintTo[i].blocknumber);
+            emit AirdropAddressAdd(_mintTo[i].to, _release);
         }
         emit MintRelease(address(this),subtotal);
     }
